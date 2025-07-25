@@ -21,7 +21,12 @@ import {
   X,
   Download,
   RefreshCw,
-  Search
+  Search,
+  BarChart2,
+  TrendingUp,
+  Target,
+  Layers,
+  Zap
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -38,7 +43,19 @@ import {
   Line,
   Area,
   AreaChart,
-  Pie
+  Pie,
+  ScatterChart,
+  Scatter,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  FunnelChart,
+  Funnel,
+  LabelList,
+  Treemap,
+  ComposedChart
 } from 'recharts';
 
 interface ChartData {
@@ -48,7 +65,7 @@ interface ChartData {
 }
 
 interface ChartSettings {
-  chartType: 'pie' | 'bar' | 'line' | 'area';
+  chartType: 'pie' | 'donut' | 'bar' | 'horizontalBar' | 'stackedBar' | 'line' | 'area' | 'scatter' | 'radar' | 'funnel' | 'treemap' | 'composed';
   title: string;
   showLegend: boolean;
   showLabels: boolean;
@@ -60,6 +77,7 @@ interface ChartSettings {
   borderRadius: number;
   showGrid: boolean;
   showTooltip: boolean;
+  innerRadius?: number;
 }
 
 interface ChartWidgetProps {
@@ -99,6 +117,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
     borderRadius: 8,
     showGrid: true,
     showTooltip: true,
+    innerRadius: 0,
   });
 
   const [showSettings, setShowSettings] = useState(false);
@@ -127,6 +146,25 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
       height: 300,
     };
 
+    // Transform data for specific chart types
+    const radarData = dataWithColors.map(item => ({
+      subject: item.name,
+      A: item.value,
+      fullMark: 100
+    }));
+
+    const scatterData = dataWithColors.map((item, index) => ({
+      x: index + 1,
+      y: item.value,
+      name: item.name
+    }));
+
+    const treemapData = dataWithColors.map(item => ({
+      name: item.name,
+      size: item.value,
+      fill: item.color
+    }));
+
     switch (settings.chartType) {
       case 'pie':
         return (
@@ -136,6 +174,29 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                 data={dataWithColors}
                 cx="50%"
                 cy="50%"
+                outerRadius={settings.size}
+                dataKey="value"
+                animationBegin={settings.animated ? 0 : undefined}
+              >
+                {dataWithColors.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+            </PieChart>
+          </ResponsiveContainer>
+        );
+
+      case 'donut':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <PieChart>
+              <Pie
+                data={dataWithColors}
+                cx="50%"
+                cy="50%"
+                innerRadius={settings.innerRadius || 40}
                 outerRadius={settings.size}
                 dataKey="value"
                 animationBegin={settings.animated ? 0 : undefined}
@@ -161,6 +222,45 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
               {settings.showLegend && <Legend />}
               <Bar 
                 dataKey="value" 
+                fill="hsl(var(--chart-1))"
+                radius={[settings.borderRadius, settings.borderRadius, 0, 0]}
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'horizontalBar':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <BarChart layout="horizontal" data={dataWithColors}>
+              {settings.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="name" />
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+              <Bar 
+                dataKey="value" 
+                fill="hsl(var(--chart-2))"
+                radius={[0, settings.borderRadius, settings.borderRadius, 0]}
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'stackedBar':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <BarChart data={dataWithColors}>
+              {settings.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+              <XAxis dataKey="name" />
+              <YAxis />
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+              <Bar 
+                dataKey="value" 
+                stackId="a"
                 fill="hsl(var(--chart-1))"
                 radius={[settings.borderRadius, settings.borderRadius, 0, 0]}
                 animationDuration={settings.animated ? 1000 : 0}
@@ -207,6 +307,104 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                 animationDuration={settings.animated ? 1000 : 0}
               />
             </AreaChart>
+          </ResponsiveContainer>
+        );
+
+      case 'scatter':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <ScatterChart data={scatterData}>
+              {settings.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+              <XAxis dataKey="x" name="Index" />
+              <YAxis dataKey="y" name="Value" />
+              {settings.showTooltip && <Tooltip cursor={{ strokeDasharray: '3 3' }} />}
+              {settings.showLegend && <Legend />}
+              <Scatter 
+                dataKey="y" 
+                fill="hsl(var(--chart-3))"
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        );
+
+      case 'radar':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <RadarChart data={radarData}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="subject" />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} />
+              <Radar
+                name="Values"
+                dataKey="A"
+                stroke="hsl(var(--chart-4))"
+                fill="hsl(var(--chart-4))"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'funnel':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <FunnelChart>
+              <Funnel
+                dataKey="value"
+                data={dataWithColors}
+                animationBegin={settings.animated ? 0 : undefined}
+              >
+                {dataWithColors.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+                {settings.showLabels && <LabelList position="center" fill="#fff" stroke="none" />}
+              </Funnel>
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+            </FunnelChart>
+          </ResponsiveContainer>
+        );
+
+      case 'treemap':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <Treemap
+              data={treemapData}
+              dataKey="size"
+              stroke="#fff"
+              fill="hsl(var(--chart-5))"
+            />
+          </ResponsiveContainer>
+        );
+
+      case 'composed':
+        return (
+          <ResponsiveContainer {...chartProps}>
+            <ComposedChart data={dataWithColors}>
+              {settings.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+              <XAxis dataKey="name" />
+              <YAxis />
+              {settings.showTooltip && <Tooltip />}
+              {settings.showLegend && <Legend />}
+              <Bar 
+                dataKey="value" 
+                fill="hsl(var(--chart-1))"
+                radius={[settings.borderRadius, settings.borderRadius, 0, 0]}
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="value" 
+                stroke="hsl(var(--chart-2))" 
+                strokeWidth={3}
+                animationDuration={settings.animated ? 1000 : 0}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         );
 
@@ -326,10 +524,28 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                           Pie Chart
                         </div>
                       </SelectItem>
+                      <SelectItem value="donut">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          Donut Chart
+                        </div>
+                      </SelectItem>
                       <SelectItem value="bar">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4" />
                           Bar Chart
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="horizontalBar">
+                        <div className="flex items-center gap-2">
+                          <BarChart2 className="w-4 h-4" />
+                          Horizontal Bar
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="stackedBar">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4" />
+                          Stacked Bar
                         </div>
                       </SelectItem>
                       <SelectItem value="line">
@@ -342,6 +558,36 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                         <div className="flex items-center gap-2">
                           <Activity className="w-4 h-4" />
                           Area Chart
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="scatter">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4" />
+                          Scatter Plot
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="radar">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          Radar Chart
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="funnel">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4" />
+                          Funnel Chart
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="treemap">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4" />
+                          Treemap
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="composed">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="w-4 h-4" />
+                          Combined Chart
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -473,6 +719,27 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                         onValueChange={([value]) => updateSettings({ size: value })}
                         max={150}
                         min={50}
+                        step={5}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Inner Radius for Donut Chart */}
+                {settings.chartType === 'donut' && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Inner Radius</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Inner Radius</span>
+                        <span className="text-sm font-medium">{settings.innerRadius}px</span>
+                      </div>
+                      <Slider
+                        value={[settings.innerRadius || 40]}
+                        onValueChange={([value]) => updateSettings({ innerRadius: value })}
+                        max={80}
+                        min={20}
                         step={5}
                         className="w-full"
                       />
